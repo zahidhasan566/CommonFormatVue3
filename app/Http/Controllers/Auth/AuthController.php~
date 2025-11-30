@@ -1,0 +1,109 @@
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\CustomUser;
+use App\Models\DealarInvoiceDetails;
+use App\Models\User;
+use App\Models\UserLog;
+use App\Models\YSparkLogin;
+use App\Models\YSparkSmsLog;
+use App\Services\JWTCustomSubject;
+use App\Traits\CommonTrait;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use App\Models\jwt\JWT;
+use Tymon\JWTAuth\Facades\JWTAuth;
+
+
+class AuthController extends Controller
+{
+    use CommonTrait;
+    public function login(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'staffId' => 'required|string',
+            'password' => 'required|string|min:4',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Invalid'], 400);
+        }
+        $staffId = $request->staffId;
+        $password = $request->password;
+
+        $user = DB::select("SELECT dbo.ufn_PasswordDecode(Password) as DecodPassword,* FROM UserManager where UserId='$staffId'");
+        if ($user) {
+            if ($user[0]->DecodPassword == $password) {
+                $user = User::where('UserId', $staffId)->first();
+                Auth::login($user);
+                $token = JWTAuth::fromUser($user);
+                return $this->respondWithToken($token);
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'data' => [],
+                    'message' => 'Invalid User ID or Password!'
+                ],401);
+            }
+        }
+        return response()->json([
+            'status' => 'error',
+            'data' => [],
+            'message' => 'No user found!'
+        ],500);
+    }
+    protected function respondWithToken($token)
+    {
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => $this->guard()->factory()->getTTL() * 60
+        ]);
+    }
+    public function generateToken($user)
+    {
+        $payload = [
+            'iat' => time(),
+            'iss' => $_SERVER['SERVER_NAME'],
+            'exp' => time() + 12 * 30 * (24 * 60 * 60),// 1 Month
+            'EmpCode' => $user['EmpCode'],
+            'staffCode' => $user['staffCode'],
+            'Business' => $user['Business'],
+            'Type' => $user['type'],
+        ];
+        try {
+            $privateKey = env("JWT_SECRET", "t3d0qNv8858l6spwApKED6yxpcGF45XTUqfwu3JHIurcIKMZ1du5pNiJBkoDQ79a");
+            $token = JWT::encode($payload, $privateKey);
+            return $token;
+        } catch (\Exception $ex) {
+            $token = false;
+        }
+        return $token;
+
+    }
+    public function guard()
+    {
+        return Auth::guard('api');
+    }
+    public function refresh()
+    {
+        $token = JWTAuth::refresh(JWTAuth::getToken());
+        return response()->json(['token' => $token]);
+    }
+    public function logout()
+    {
+        try {
+            $this->guard()->logout();
+        } catch (\Exception $exception) {
+
+        }
+        return response()->json(['message' => 'Successfully logged out']);
+    }
+
+}

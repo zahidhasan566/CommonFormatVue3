@@ -1,0 +1,15 @@
+/* Move @use to the top */
+@use 'forms/theme-checkbox-radio' as *;
+@use 'main' as *;
+@use 'structure' as *;
+@use 'elements/alert' as *;
+@use 'forms/switches' as *;
+@use 'tables/table-custom' as *;
+@use 'dark' as *;
+@use 'style' as *;
+
+/* Import external CSS files (which are not processed by Sass) */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'perfect-scrollbar.css';
+@import 'custom-loader.css';
+@import 'animate.css';

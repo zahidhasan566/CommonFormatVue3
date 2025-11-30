@@ -1,0 +1,80 @@
+<template>
+<div>
+    <teleport to="#breadcrumb">
+        <ul class="navbar-nav flex-row">
+            <li>
+                <div class="page-header">
+                    <nav class="breadcrumb-one" aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="#Home">Home</a></li>
+                            <li class="breadcrumb-item active"><a href="#Components">Dashboard</a></li>
+                        </ol>
+                    </nav>
+                </div>
+            </li>
+        </ul>
+    </teleport>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="statbox widget box box-shadow">
+                <div class="widget-header">
+                    <div class="row">
+                        <div class="col-xl-12 col-md-12 col-sm-12 col-12">
+                            <h4>Dashboard</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="widget-content widget-content-area">
+                    <h5>Welcome to Dashboard!</h5>
+
+                    <!-- Dashboard content -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>Total Users</h6>
+                                    <h3>150</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>Total Orders</h6>
+                                    <h3>89</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>Revenue</h6>
+                                    <h3>$12,450</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</template>
+
+<script>
+export default {
+    name: 'Dashboard',
+    data() {
+        return {
+            stats: {
+                users: 150,
+                orders: 89,
+                revenue: 12450
+            }
+        }
+    },
+    mounted() {
+        console.log('Dashboard component mounted successfully!');
+    }
+}
+</script>

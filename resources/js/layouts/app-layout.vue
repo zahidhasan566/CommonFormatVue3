@@ -1,0 +1,43 @@
+<template>
+    <div>
+        <!-- BEGIN NAVBAR -->
+        <Header></Header>
+        <!-- END NAVBAR -->
+
+        <!-- BEGIN MAIN CONTAINER -->
+        <div
+            class="main-container"
+            id="container"
+            :class="[
+        !$store.state.is_show_sidebar ? 'sidebar-closed sbar-open' : '',
+        $store.state.menu_style === 'collapsible-vertical' ? 'collapsible-vertical-mobile' : ''
+      ]"
+        >
+            <!-- BEGIN SIDEBAR -->
+            <Sidebar></Sidebar>
+            <!-- END SIDEBAR -->
+
+            <!-- BEGIN CONTENT AREA -->
+            <div id="content" class="main-content">
+
+                <div class="layout-px-spacing dash_1">
+                    <div>
+                        <router-view />
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+        <!-- END MAIN CONTAINER -->
+    </div>
+</template>
+
+<script setup>
+import Header from '../components/layout/header.vue';
+import Sidebar from '../components/layout/sidebar.vue';
+import Footer from '../components/layout/footer.vue';
+// import AppSettings from '../components/app-settings.vue'; // Uncomment if you need it
+</script>
+
+

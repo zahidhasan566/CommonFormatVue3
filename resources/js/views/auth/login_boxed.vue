@@ -1,0 +1,246 @@
+<template>
+    <div class="login-container">
+        <div class="login-box account-card">
+            <h1 style="color: white">Group Expense</h1>
+            <form class="login-form" @submit.prevent="onSubmit">
+                <!-- Email Input -->
+                <div class="input-group">
+                    <input
+                        type="text"
+                        v-model="staffId.value.value"
+                        placeholder="Staff Id"
+                        class="form-control"
+                        :class="{'error-border': staffId.errorMessage.value}"
+                    />
+                    <span v-if="staffId.errorMessage.value" class="error-message">
+            {{ staffId.errorMessage.value }}
+          </span>
+                </div>
+
+                <!-- Password Input -->
+                <div class="input-group">
+                    <input
+                        :type="showPassword ? 'text' : 'password'"
+                        v-model="password.value.value"
+                        placeholder="Password"
+                        class="form-control"
+                        :class="{'error-border': password.errorMessage.value}"
+                    />
+                    <span v-if="password.errorMessage.value" class="error-message">
+            {{ password.errorMessage.value }}
+          </span>
+                    <svg
+                        @click="togglePassword"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="feather feather-eye"
+                    >
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </div>
+
+                <button :disabled="isSubmitting" type="submit" class="btn login-btn">
+                    {{ isSubmitting ? 'Logging in...' : 'Log In' }}
+                </button>
+            </form>
+        </div>
+    </div>
+</template>
+
+<script setup>
+import {inject, ref} from 'vue'
+import { useForm, useField } from 'vee-validate'
+import { useRouter } from 'vue-router'
+import { useCommon } from '@/composables/useCommon';
+
+const { axiosGet, axiosPost, errorNoti, successNoti } = inject('common');
+// Import your validation system
+import { validationRules } from '@/utils/validationRules'
+
+const router = useRouter()
+
+// Manual rule combination function (since combineRules might not be available)
+const createCombinedRule = (...rules) => {
+    return (value) => {
+        for (const rule of rules) {
+            const result = typeof rule === 'function' ? rule(value) : rule
+            if (result !== true) {
+                return result
+            }
+        }
+        return true
+    }
+}
+
+// Setup form
+const { handleSubmit, isSubmitting } = useForm()
+
+// Create email validation rule
+const emailValidation = createCombinedRule(
+    validationRules.required,
+    validationRules.email
+)
+
+// Create password validation rule
+const passwordValidation = createCombinedRule(
+    validationRules.required,
+    validationRules.minLength(4)
+)
+
+// Create fields
+//const email = useField('email', emailValidation)
+const password = useField('password', passwordValidation)
+const staffId = useField('staffId')
+
+const showPassword = ref(false)
+
+const togglePassword = () => {
+    showPassword.value = !showPassword.value
+}
+
+const onSubmit = handleSubmit(async (values) => {
+    try {
+        var submitUrl = 'login';
+        axiosPost(submitUrl, {
+            staffId: values.staffId,
+            password: values.password,
+        }, (response) => {
+            localStorage.setItem("token", response.access_token);
+            console.log(response.access_token)
+            successNoti('Login successfully');
+            router.push({ path: '/dashboard' });
+        }, (error) => {
+            console.log('dfdf')
+            console.log(error)
+            errorNoti('Login failed');
+        })
+        // Here you would make your API call
+        // const response = await loginAPI(values.email, values.password)
+
+        // Navigate to dashboard
+        //await router.push({ name: 'Dashboard' })
+    } catch (error) {
+        console.error('Login failed:', error)
+    }
+})
+</script>
+
+<style scoped>
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: url('http://app.acibd.com/la_monitoring/assets/images/geb.png') no-repeat top;
+    background-size: cover;
+    background-position: center;
+}
+
+.login-box {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 30px;
+    border-radius: 10px;
+    width: 400px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(5px);
+}
+
+h1 {
+    font-size: 2.5em;
+    color: #3e8e41;
+    margin-bottom: 30px;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.input-group input:focus {
+    border-color: #3e8e41;
+    box-shadow: 0 0 5px rgba(62, 142, 65, 0.3);
+}
+
+.error-border {
+    border-color: #e74c3c !important;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 12px;
+    text-align: left;
+    margin-top: 5px;
+    display: block;
+}
+
+.login-btn {
+    background-color: #00BCD4;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.login-btn:hover:not(:disabled) {
+    background-color: #2196F3;
+}
+
+.login-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.feather.feather-eye {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #666;
+    width: 20px;
+    height: 20px;
+}
+
+.feather.feather-eye:hover {
+    color: #3e8e41;
+}
+.account-card {
+    background-color: rgb(0 53 81 / 43%);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.account-card-content {
+    padding: 20px; /* Adjust padding as necessary */
+}
+
+</style>

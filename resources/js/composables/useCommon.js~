@@ -1,0 +1,198 @@
+import { ref } from 'vue';
+import { useToast } from 'vue-toastification';
+import axios from 'axios';
+import Swal from 'sweetalert2';
+import moment from 'moment';
+import { format } from 'number-currency-format';
+import { getCurrentInstance } from 'vue';
+import { ElNotification } from 'element-plus';
+const baseurl = require('../base_url');
+
+// import 'vue-toastification/dist/index.css';
+// import XLSX from "xlsx";
+
+// Create the toast instance globally
+const toast = useToast();
+
+// Notification Methods (Global, outside of useCommon)
+export function successNoti(msg) {
+    toast.success(msg);
+}
+
+export function errorNoti(msg) {
+    if (!msg.response || !msg.response.data?.message) {
+        toast.error(msg);
+    } else {
+        toast.error(msg.response.data.message);
+    }
+}
+
+export function useCommon() {
+    // FIX: Don't use getCurrentInstance here - get mainOrigin directly
+    const mainOrigin = window.location.origin + baseurl
+    console.log(mainOrigin)
+
+    // Reactive state for data, headers, and dataSets
+    const data = ref({});
+    const headers = ref([]);
+    const dataSets = ref([]);
+
+    // Utility function for configuration
+    const config = () => {
+        let token = localStorage.getItem('token');
+        return {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json; charset=UTF-8',
+                Accept: 'application/json',
+            }
+        };
+    };
+
+    // Error notification
+    const errorNoti = (error) => {
+        const message = error.response?.data?.message || error.message || 'An error occurred';
+
+        ElNotification({
+            title: 'Error',
+            message: message,
+            type: 'error',
+            duration: 3000
+        });
+
+        console.error('Error:', error);
+    };
+
+    // Success notification
+    const successNoti = (message) => {
+        ElNotification({
+            title: 'Success',
+            message: message,
+            type: 'success',
+            duration: 3000
+        });
+    };
+
+    // Axios functions
+    const axiosGet = (route, success, error) => {
+        axios.get(`${mainOrigin}api/${route}`, config())
+            .then((response) => success(response.data))
+            .catch((err) => error(err));
+    };
+
+    const axiosGetWithoutToken = (route, success, error) => {
+        axios.get(`${mainOrigin}api/${route}`)
+            .then((response) => success(response.data))
+            .catch((err) => error(err));
+    };
+
+    const axiosPost = (route, data, success, error) => {
+        axios.post(`${mainOrigin}api/${route}`, data, config())
+            .then((response) => success(response.data))
+            .catch((err) => error(err));
+    };
+
+    const axiosPostWithoutToken = (route, data, success, error) => {
+        axios.post(`${mainOrigin}api/${route}`, data)
+            .then((response) => success(response.data))
+            .catch((err) => error(err));
+    };
+
+    const axiosDelete = (route, id, success, error) => {
+        axios.delete(`${mainOrigin}api/${route}/${id}`, config())
+            .then((response) => success(response.data))
+            .catch((err) => error(err));
+    };
+
+    const axiosPut = (route, data, success, error) => {
+        axios.put(`${mainOrigin}api/${route}`, data, config())
+            .then((response) => success(response.data))
+            .catch((err) => error(err));
+    };
+
+    // Utility methods
+    const numberFormat = (value) => {
+        if (value == null) return '';
+        return format(value, { currency: '', spacing: false, currencyPosition: 'LEFT' });
+    };
+
+    const weightFormat = (value) => {
+        return format(value, { currency: ' Kg.', spacing: false, currencyPosition: 'right' });
+    };
+
+    const dateFormat = (date) => {
+        return date ? moment(date, 'YYYY-MM-DD').format('DD-MM-YYYY') : '';
+    };
+
+    const dateTimeFormat = (date) => {
+        return date ? moment(date, 'YYYY-MM-DD h:mm:ss').format('DD-MM-YYYY h:mm a') : '';
+    };
+
+    const periodFormat = (data) => {
+        return data ? moment(data).format('MM-YYYY') : '';
+    };
+
+    // Swal Alerts
+    const approveAlert = (callback) => {
+        Swal.fire({
+            title: 'Are you sure to approve?',
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, Approve it!',
+            cancelButtonText: 'No'
+        }).then((result) => {
+            if (result.value) {
+                callback();
+            }
+        });
+    };
+
+    const deleteAlert = (callback) => {
+        Swal.fire({
+            title: 'Are you sure to cancel?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, Cancel it!',
+            cancelButtonText: 'No'
+        }).then((result) => {
+            if (result.value) {
+                callback();
+            }
+        });
+    };
+
+    // Number formatting helper
+    const numberWithCommas = (x) => {
+        if (x !== undefined) {
+            x = Number(x);
+            return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+    };
+
+    return {
+        data,
+        headers,
+        dataSets,
+        axiosGet,
+        axiosGetWithoutToken,
+        axiosPost,
+        axiosPostWithoutToken,
+        axiosDelete,
+        axiosPut,
+        successNoti,
+        errorNoti,
+        numberFormat,
+        weightFormat,
+        dateFormat,
+        dateTimeFormat,
+        periodFormat,
+        approveAlert,
+        deleteAlert,
+        numberWithCommas,
+        mainOrigin // Export mainOrigin so components can use it if needed
+    };
+}

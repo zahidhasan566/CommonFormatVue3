@@ -1,0 +1,6 @@
+.actions a {
+    margin-right: 8px;
+}
+.actions a:last-child {
+    margin-right: 0;
+}

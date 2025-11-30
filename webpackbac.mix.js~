@@ -1,0 +1,64 @@
+const mix = require('laravel-mix');
+const path = require('path');
+
+mix.js("resources/js/main.js", "public/js")
+    .sass("resources/js/assets/sass/app.scss", "public/css", {
+        sassOptions: {
+            outputStyle: 'expanded'
+        }
+    })
+    // .sass("resources/js/assets/sass/app.scss", "public/css")
+    .vue()
+    .webpackConfig({
+        resolve: {
+            alias: {
+                "@": path.resolve(__dirname, "resources/js/"),
+                "@themeConfig": path.resolve(
+                    __dirname,
+                    "resources/js/theme.config.js"
+                ),
+            },
+        },
+        module: {
+            rules: [
+                {
+                    test: /\.s[ac]ss$/i,
+                    use: [
+                        {
+                            loader: "sass-loader",
+                            options: {
+                                sassOptions: {
+                                    includePaths: [
+                                        "node_modules",
+                                        "resources/js/assets",
+                                    ],
+                                },
+                            },
+                        },
+                    ],
+                },
+            ],
+        },
+        output: {
+            chunkFilename: "js/chunks/[name].[chunkhash].js",
+        },
+    })
+    .override((webpackConfig) => {
+        webpackConfig.module.rules.forEach((rule) => {
+            if (
+                rule.test.toString() ===
+                "/(\\.(png|jpe?g|gif|webp|avif)$|^((?!font).)*\\.svg$)/"
+            ) {
+                if (Array.isArray(rule.use)) {
+                    rule.use.forEach((ruleUse) => {
+                        ruleUse.options.esModule = false;
+                        ruleUse.options.name =
+                            "images/[path][name]-[hash].[ext]";
+                        ruleUse.options.context =
+                            "resources/js/assets/images";
+                    });
+                }
+            }
+        });
+    })
+    .version();

@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Http\Controllers\Users;
+
+use App\Http\Controllers\Controller;
+use App\Models\BusinessBranch;
+use App\Models\Designation;
+use App\Models\Menu;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class UserController extends Controller
+{
+    public function index(Request $request){
+//        $roleId = Auth::user()->RoleId;
+        $take = $request->take;
+        $search = $request->search;
+
+        $data = User::select(
+            'StaffID',
+            'UserName',
+            'UserLevel',
+            'Branch as BranchName',
+            DB::raw("CONVERT(date,EntryDate) as EntryDate")
+        )
+            ->where(function ($q) use ($search) {
+                $q->where('StaffID', 'like', '%' . $search . '%');
+                $q->Orwhere('UserName', 'like', '%' . $search . '%');
+            })
+            ->orderBy('EntryDate','desc');
+
+        if (!empty($request->startDate)) {
+            $first = $request->startDate;
+            $second = $request->endDate;
+
+            $start_date = date("Y-m-d", strtotime($first));
+            $end_date = date("Y-m-d", strtotime($second));
+
+            $data = $data->whereBetween(DB::raw("CONVERT(DATE, EntryDate)"), [$start_date, $end_date]);
+        }
+
+        if ($request->type === 'export') {
+            return response()->json([
+                'data' => $data->get(),
+            ]);
+        } else {
+            return $data->paginate($take);
+        }
+    }
+
+    public function getSupportingData(){
+        dd(Auth);
+        $menu = Menu::all();
+        $businessBranch = BusinessBranch::where('Business',Auth::user()->Business)->get();
+        $designation = Designation::where('Business',Auth::user()->Business)->get();
+        return response()->json([
+            'menu' => $menu,
+            'businessBranch' => $businessBranch,
+            'designation' => $designation
+        ]);
+    }
+}

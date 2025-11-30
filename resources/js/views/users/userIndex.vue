@@ -1,0 +1,280 @@
+<template>
+    <div class="user-index">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="page-title">User Management</h4>
+                            <div>
+                                <button class="btn btn-secondary btn-sm" @click="addUser">
+                                    <i class="ti-download"></i> Add User
+                                </button>
+                                <button class="btn btn-success btn-sm" @click="exportData">
+                                    <i class="ti-download"></i> Export
+                                </button>
+                                <button class="btn btn-primary btn-sm" @click="refreshTable">
+                                    <i class="ti-reload"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Call the Advanced DataTable Component -->
+            <Advanced
+                :options="datatableOptions">
+                <!-- Custom slot for actions column -->
+                <template #actions="{ item }">
+                    <button class="btn btn-sm btn-custom btn-primary" @click="editUser(item)" title="Edit">
+                        <i class="ti-pencil">Edit</i>
+                    </button>
+                    <button class="btn btn-sm btn-custom btn-dark" @click="viewUser(item)" title="View">
+                        <i class="ti-eye">Bank</i>
+                    </button>
+                    <button class="btn btn-sm  btn-custom btn-danger" @click="deleteUser(item)" title="Delete">
+                        <i class="ti-trash">Bike</i>
+                    </button>
+                    <button class="btn btn-sm  btn-custom btn-info " @click="deleteUser(item)" title="Delete">
+                        <i class="ti-trash">Car</i>
+                    </button>
+                </template>
+
+                <!-- Optional: Custom slot for status column -->
+                <template #status="{ item }">
+          <span :class="getStatusClass(item.status)">
+            {{ item.status }}
+          </span>
+                </template>
+            </Advanced>
+
+            <AddEditUsers  v-if="loading"/>
+        </div>
+    </div>
+</template>
+
+<script setup>
+import {ref, onMounted, inject, onBeforeUnmount,nextTick } from 'vue';
+import Advanced from '../../datatable/Advanced.vue';
+import AddEditUsers from '../../components/users/UserAddEdit.vue';
+
+// Inject emitter and common utilities
+const emitter = inject('emitter');
+const { axiosGet, axiosPost, errorNoti, successNoti } = inject('common');
+
+// Data
+const datatableOptions = ref({
+    source: 'users/list', // Your API endpoint
+    pages: [10, 25, 50, 100], // Page size options
+    filterOption: true, // Show filter section
+    search: true, // Enable search
+    columns: [
+        { key: 'id', sortable: true },
+        { key: 'name', sortable: true },
+        { key: 'email', sortable: true },
+        { key: 'role', sortable: true },
+        { key: 'status', sortable: true },
+        { key: 'created_at', sortable: true }
+    ],
+    hideColumn: ['password', 'remember_token', 'deleted_at'], // Columns to hide from API response
+    addHeader: ['Actions'], // Additional column headers
+    textCenter: [0, 4, 6], // Column indices to center align (id, status, actions)
+    textRight: [], // Column indices to right align
+    numberFormat: [], // Column indices to format as numbers
+    dateFormat: [5], // Column indices to format as dates (created_at)
+    periodFormat: [], // Column indices to format as periods
+    slots: [5], // Column indices with custom slots (actions)
+    slotsName: ['actions'], // Slot names corresponding to slots array
+    showFilter: ['startDate', 'endDate'], // Filters to show
+    colSize: [
+        'col-md-3', // startDate
+        'col-md-3', // endDate
+        'col-md-2', // roles
+        'col-md-2', // active
+        'col-md-2', // gender
+        'col-md-3'  // districts
+    ],
+    sortedType: 'desc',
+    category: 'users',
+    filters: [] // Additional custom filters
+});
+
+const action = ref('user-management');
+const roles = ref([]);
+const customers = ref([]);
+const districts = ref([]);
+const dealerPoints = ref([]);
+const existingOrResigned = ref([]);
+const gender = ref([]);
+const business = ref([]);
+const department = ref([]);
+const paymentModes = ref([]);
+const loading = ref(false);
+
+onMounted(() => {
+    // Event listeners
+    // emitter.off('changeStatus',() => {
+    //     loading = false
+    // })
+    // emitter.on('add-edit-user', () => {
+    //     loading.value = true;  // Set to true when the event is emitted
+    // });
+});
+
+
+onBeforeUnmount(() => {
+    // Clean up event listeners to avoid memory leaks
+    emitter.off('add-edit-user');
+});
+// Methods
+const editUser = (item) => {
+    console.log('Edit user:', item);
+};
+
+const addUser = ()=>{
+    //loading.value = true;
+    // nextTick(() => {
+    //     emitter.emit('add-edit-user');
+    //     console.log(loading.value);  // This will now log the updated value (true)
+    // });
+    loading.value = true;
+    // Wait for component to mount before emitting
+    setTimeout(() => {
+        emitter.emit('add-edit-user');
+    }, 50);
+}
+
+// const changeStatus = () => {
+//     loading = true
+//     console.log(loading)
+// };
+
+const viewUser = (item) => {
+    console.log('View user:', item);
+    // Navigate to view page or open modal
+};
+
+
+const deleteUser = (item) => {
+    if (confirm('Are you sure you want to delete this user?')) {
+        axiosPost(`api/users/delete/${item.id}`, {},
+            (response) => {
+                successNoti('User deleted successfully!');
+                refreshTable(); // Refresh the table after deletion
+            },
+            (error) => {
+                errorNoti(error);
+            }
+        );
+    }
+};
+
+const refreshTable = () => {
+    // Emit event to refresh the datatable
+    emitter.emit('refresh-datatable', null, null);
+};
+
+const exportData = () => {
+    // Emit event to export data
+    const filename = "Users-List";
+    emitter.emit('export-data', filename);
+};
+
+const getStatusClass = (status) => {
+    const classes = {
+        'Active': 'badge bg-success',
+        'Inactive': 'badge bg-secondary',
+        'Pending': 'badge bg-warning',
+        'Blocked': 'badge bg-danger'
+    };
+    return classes[status] || 'badge bg-secondary';
+};
+
+const loadFilterData = () => {
+    // Load roles
+    axiosGet('api/roles/list',
+        (response) => {
+            roles.value = response.data || [];
+        },
+        (error) => {
+            errorNoti(error);
+        }
+    );
+
+    // Load districts
+    axiosGet('api/districts/list',
+        (response) => {
+            districts.value = response.data || [];
+        },
+        (error) => {
+            errorNoti(error);
+        }
+    );
+
+    // You can add more filter data loading here
+    customers.value = [];
+    dealerPoints.value = [];
+    existingOrResigned.value = [];
+    gender.value = [];
+    business.value = [];
+    department.value = [];
+    paymentModes.value = [];
+};
+
+// Lifecycle
+
+</script>
+
+<style scoped>
+.user-index {
+    padding: 20px;
+}
+
+.page-title-box {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.page-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.badge {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.bg-success {
+    background-color: #28a745 !important;
+    color: white;
+}
+
+.bg-secondary {
+    background-color: #6c757d !important;
+    color: white;
+}
+
+.bg-warning {
+    background-color: #ffc107 !important;
+    color: black;
+}
+
+.bg-danger {
+    background-color: #dc3545 !important;
+    color: white;
+}
+
+.btn-sm {
+    margin-right: 5px;
+}
+.btn-custom{
+    padding: 4px 12px !important;
+}
+</style>

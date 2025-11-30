@@ -1,0 +1,7 @@
+
+// base_url.js (Change to CommonJS export)
+// resources/js/base_url.js
+const baseurl = "/groupexpense_v4/";
+
+// Use ES6 export instead of module.exports
+module.exports = baseurl;
