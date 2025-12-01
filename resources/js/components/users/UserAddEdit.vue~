@@ -4,11 +4,19 @@
         <div v-if="isModalOpen" class="modal fade show" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" style="display:block;">
             <div class="modal-dialog modal-xl" role="document">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h4 class="modal-title">{{title}}</h4>
-                        <button type="button" class="close" @click="closeModal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+                    <div class="modal-header" style="display: initial">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4 class="modal-title">{{title}}</h4>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <button type="button" class="close" @click="closeModal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        </div>
+
+
                     </div>
                     <div class="modal-body">
                         <Form @submit="submitForm" v-slot="{ errors }">
@@ -109,11 +117,31 @@
                                             rules="required"
                                         >
                                             <option value="">Select Designation</option>
-                                            <option v-for="designation in designationList" :key="designation.id" :value="designation.id">
-                                                {{ designation.name }}
+                                            <option v-for="designation in designationList" :key="designation.id" :value="designation.DesignationID">
+                                                {{ designation.DesignationName }}
                                             </option>
                                         </Field>
                                         <ErrorMessage name="designation" class="text-danger" />
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <!-- Designation -->
+                                    <div class="form-group">
+                                        <label for="Business">Business <span class="text-danger">*</span></label>
+                                        <Field
+                                            name="business"
+                                            v-model="formData.business"
+                                            as="select"
+                                            class="form-control"
+                                            :class="{ 'is-invalid': errors.business }"
+                                            rules="required"
+                                        >
+                                            <option value="">Select Business</option>
+                                            <option v-for="data in businessList" :key="data.BranchCode" :value="data.BranchCode">
+                                                {{ data.BranchName }}
+                                            </option>
+                                        </Field>
+                                        <ErrorMessage name="Business" class="text-danger" />
                                     </div>
                                 </div>
 
@@ -152,44 +180,90 @@
                                         </Field>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <!-- User Menu (Multi-select) -->
+                                <div class="col-md-2">
+                                    <!-- Staff ID -->
                                     <div class="form-group">
-                                        <label for="usermenu">User Menu <span class="text-danger">*</span></label>
-                                        <Field name="usermenu" v-slot="{ field, errorMessage }">
-                                            <Multiselect
-                                                v-model="formData.usermenu"
-                                                :options="menuList"
-                                                mode="tags"
-                                                :close-on-select="false"
-                                                :searchable="true"
-                                                placeholder="Select Menu"
-                                                :class="{ 'is-invalid-multiselect': errorMessage }"
-                                            />
-                                            <span v-if="errorMessage" class="text-danger">{{ errorMessage }}</span>
+                                        <label for="levelCode">Level Code </label>
+                                        <Field
+                                            name="levelCode"
+                                            v-model="formData.levelCode"
+                                            type="text"
+                                            class="form-control"
+                                            :class="{ 'is-invalid': errors.levelCode }"
+
+                                        />
+                                        <ErrorMessage name="levelCode" class="text-danger" />
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <!-- User Level -->
+                                    <div class="form-group">
+                                        <label for="userType">User Type </label>
+                                        <Field
+                                            name="userType"
+                                            v-model="formData.userType"
+                                            as="select"
+                                            class="form-control"
+                                        >
+                                            <option value="1">Admin</option>
+                                            <option value="3">Field Force</option>
+                                            <option value="2">Report User</option>
                                         </Field>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div class="col-md-3">
-                                    <!-- Territory (Multi-select) -->
-                                    <div class="form-group">
-                                        <label for="territory">Territory <span class="text-danger">*</span></label>
-                                        <Field name="territory" v-slot="{ field, errorMessage }">
-                                            <Multiselect
+                            <div class="row">
+                                <div class="row">
+                                    <div class="col-md-3 "  v-for="(menuGroup, index) in menuList" :key="index">
+                                        <!-- User Menu (Multi-select) -->
+                                        <div class="form-group">
+                                            <label class="form-label">{{ menuGroup.label }}</label>
+                                            <Field :name="`usermenu_${menuGroup.label}`" v-slot="{ field, errorMessage }">
+                                                <Multiselect
+                                                    v-model="formData.usermenu[menuGroup.label]"
+                                                    :options="menuGroup.options"
+                                                    mode="tags"
+                                                    :close-on-select="false"
+                                                    :searchable="true"
+                                                    placeholder="Select Menu"
+                                                    label="label"
+                                                    valueProp="value"
+                                                    trackBy="value"
+                                                    :class="{ 'is-invalid-multiselect': errorMessage }"
+                                                />
+                                                <span v-if="errorMessage" class="text-danger">{{ errorMessage }}</span>
+                                            </Field>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <!-- Territory (Multi-select) -->
+                                        <div class="form-group">
+                                            <label for="territory">Territory <span class="text-danger">*</span></label>
+                                            <Field
+                                                :rules="territoryRequired"
+                                                name="territory"
                                                 v-model="formData.territory"
-                                                :options="territoryList"
-                                                mode="tags"
-                                                :close-on-select="false"
-                                                :searchable="true"
-                                                placeholder="Select Territory"
-                                                :class="{ 'is-invalid-multiselect': errorMessage }"
-                                            />
-                                            <span v-if="errorMessage" class="text-danger">{{ errorMessage }}</span>
-                                        </Field>
+                                                v-slot="{ field, errorMessage, value, handleChange }"
+                                            >
+                                                <Multiselect
+                                                    :modelValue="value"
+                                                    @update:modelValue="handleChange"
+                                                    :options="territoryList"
+                                                    mode="tags"
+                                                    :close-on-select="false"
+                                                    :searchable="true"
+                                                    placeholder="Select Territory"
+                                                    label="TTYName"
+                                                    valueProp="TTYCode"
+                                                    trackBy="TTYCode"
+                                                    :class="{ 'is-invalid-multiselect': errorMessage }"
+                                                />
+                                                <span v-if="errorMessage" class="text-danger">{{ errorMessage }}</span>
+                                            </Field>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -260,15 +334,19 @@ const formData = ref({
     password: '',
     confirmpassword: '',
     username: '',
+    business: '',
     designation: '',
     userLevel: 'Level1',
     active: 'Y',
-    usermenu: [],
+    usermenu: {},
     territory: [],
+    levelCode: '',
+    userType: ''
 });
 const designationList = ref([]);
 const menuList = ref([]);
 const territoryList = ref([]);
+const businessList = ref([]);
 const title = ref('');
 
 // Custom validation rule for password confirmation
@@ -292,11 +370,14 @@ const closeModal = () => {
         password: '',
         confirmpassword: '',
         username: '',
+        business: '',
         designation: '',
         userLevel: 'Level1',
         active: 'Y',
-        usermenu: [],
+        usermenu: {},
         territory: [],
+        levelCode: '',
+        userType: ''
     };
 };
 
@@ -312,41 +393,77 @@ onMounted(() => {
 
 const fetchSupportingData = async () => {
     try {
-        // Mock data for demonstration
-        designationList.value = [
-            { id: 1, name: 'Manager' },
-            { id: 2, name: 'Developer' },
-            { id: 3, name: 'Designer' }
-        ];
-        menuList.value = ['Dashboard', 'Reports', 'Settings', 'Users'];
-        territoryList.value = ['North', 'South', 'East', 'West'];
-
         axiosGet('users/supporting-data', (response) => {
-            console.log(response)
+            designationList.value = response.designation.map(item => ({
+                DesignationID: item.DesignationID,
+                DesignationName: item.DesignationName
+            }));
+            businessList.value = response.businessBranch
+            menuList.value = formatMenuData(response.menu);
+            // Initialize selected menus
+            formData.usermenu = initializeSelectedMenus(response.menu);
+            territoryList.value = response.territory
+
         }, (error) => {
             errorNoti(error);
         });
 
-        // Uncomment for actual API calls
-        // const [designations, menus, territories] = await Promise.all([
-        //     fetch('/api/your-endpoint-for-designations').then((res) => res.json()),
-        //     fetch('/api/your-endpoint-for-menus').then((res) => res.json()),
-        //     fetch('/api/your-endpoint-for-territories').then((res) => res.json()),
-        // ]);
-        // designationList.value = designations;
-        // menuList.value = menus;
-        // territoryList.value = territories;
     } catch (error) {
         console.error('Error fetching supporting data:', error);
     }
 };
+// Format the fetched menu data to the structure needed for Vue Multiselect
+const formatMenuData = (menus) => {
+    const formattedMenus = [];
 
+    // Group menus by ParentMenuName
+    for (let [parentMenu, subMenus] of Object.entries(menus)) {
+        formattedMenus.push({
+            label: parentMenu,  // Parent menu name
+            options: subMenus   // Array of submenu items
+        });
+    }
+    return formattedMenus;
+};
+
+// Initialize selected menus grouped by parent
+const initializeSelectedMenus = (menus) => {
+    const selectedMenus = {};
+
+    for (let [parentMenu, subMenus] of Object.entries(menus)) {
+        selectedMenus[parentMenu] = subMenus
+            .filter(menu => menu.selected)
+            .map(menu => menu.value);
+    }
+
+    return selectedMenus;
+};
+
+// Function to get all selected menu IDs as flat array (for submission)
+const territoryRequired = (value) => {
+    if (!value || value.length === 0) {
+        return 'At least one territory is required';
+    }
+    return true;
+};
 const submitForm = (values) => {
     console.log('Form data:', formData.value);
     console.log('Validated values:', values);
-    // Make API call here to submit the form data
-    // Example: fetch('/api/submit-user', { method: 'POST', body: JSON.stringify(formData.value) });
-    closeModal();
+    try {
+        var submitUrl = 'users/add';
+        axiosPost(submitUrl, {
+            formData: formData.value,
+        }, (response) => {
+            successNoti(response.message);
+            emitter.emit('refresh-datatable', null, null);
+            closeModal();
+        }, (error) => {
+            errorNoti(error);
+        })
+    } catch (error) {
+        console.error(error)
+    }
+
 };
 
 onBeforeUnmount(() => {

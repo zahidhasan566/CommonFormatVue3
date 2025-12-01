@@ -3,12 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\CustomUser;
 use App\Models\DealarInvoiceDetails;
 use App\Models\User;
-use App\Models\UserLog;
-use App\Models\YSparkLogin;
-use App\Models\YSparkSmsLog;
+
 use App\Services\JWTCustomSubject;
 use App\Traits\CommonTrait;
 use Carbon\Carbon;
@@ -41,6 +38,7 @@ class AuthController extends Controller
         if ($user) {
             if ($user[0]->DecodPassword == $password) {
                 $user = User::where('UserId', $staffId)->first();
+                dd($user);
                 Auth::login($user);
                 $token = JWTAuth::fromUser($user);
                 return $this->respondWithToken($token);

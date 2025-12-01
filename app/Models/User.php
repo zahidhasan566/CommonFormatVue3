@@ -16,22 +16,27 @@ class User extends Authenticatable implements JWTSubject
     protected $table = "UserManager";
     protected $guarded = [];
     public $primaryKey = 'UserId';
-    public $incrementing = false; // Add this if UserId is not auto-incrementing
+    public $incrementing = false;
     protected $keyType = 'string';
+    public $timestamps = false;
 
 
 //    public function getJWTIdentifier()
 //    {
 //        return $this->id; // The unique identifier of the user (e.g., user ID)
 //    }
-    public function getJWTIdentifier() {
-        return $this->getKey(); // This will use the primary key (UserId)
-        // OR explicitly: return $this->UserId;
+    public function getJWTIdentifier()
+    {
+        return $this->UserId;
     }
 
     public function getJWTCustomClaims()
     {
         return []; // Custom claims (optional)
+    }
+    public function getAuthIdentifierName()
+    {
+        return 'UserId';
     }
 
 

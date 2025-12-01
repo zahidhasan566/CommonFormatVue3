@@ -7,9 +7,12 @@ use App\Models\BusinessBranch;
 use App\Models\Designation;
 use App\Models\Menu;
 use App\Models\User;
+use App\Models\UserMenu;
+use App\Models\UserTerritory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -51,14 +54,160 @@ class UserController extends Controller
     }
 
     public function getSupportingData(){
-        dd(Auth::user());
-        $menu = Menu::all();
-        $businessBranch = BusinessBranch::where('Business',Auth::user()->Business)->get();
-        $designation = Designation::where('Business',Auth::user()->Business)->get();
+        $menu = $this->getUserMenu(Auth::user()->UserId, Auth::user()->DefaultBusiness);
+        $businessBranch = BusinessBranch::where('Business',Auth::user()->DefaultBusiness)->get();
+        $designation = Designation::where('Business',Auth::user()->DefaultBusiness)->get();
+        $territory = $this->getUserTerritory(Auth::user()->UserId, Auth::user()->DefaultBusiness);
         return response()->json([
             'menu' => $menu,
             'businessBranch' => $businessBranch,
-            'designation' => $designation
+            'designation' => $designation,
+            'territory' => $territory,
         ]);
     }
+
+
+    public function storeUser( Request $request){
+        $validator = Validator::make($request->formData, [
+            'userid' => 'required',
+            'staffid' => 'required',
+            'password' => 'required',
+            'confirmpassword' => 'required',
+            'username' => 'required',
+            'business' => 'required',
+            'designation' => 'required',
+            'userLevel' => 'required',
+            'active' => 'required',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['status' => 401, 'error' => $validator->errors()]);
+        }
+
+        DB::beginTransaction();
+        try{
+
+            $dataToAdd = $request->formData;
+            //Insert User
+            $password = $dataToAdd['password'];
+            $passwordData = DB::select("select dbo.ufn_PasswordEncode('$password') as RawPass");
+            $user = new User();
+            $user->UserId = $dataToAdd['userid'];
+            $user->StaffID = $dataToAdd['staffid'];
+            $user->Password = $passwordData[0]->RawPass;;
+            $user->UserName = $dataToAdd['username'];
+            $user->Branch = $dataToAdd['business'];
+            $user->Designation = $dataToAdd['designation'];
+            $user->UserLevel = $dataToAdd['userLevel'];
+            $user->Active = $dataToAdd['active'];
+            $user->DefaultBusiness = Auth::user()->DefaultBusiness;
+            $user->LevelCode = $dataToAdd['levelCode'];
+            $user->UserType = $dataToAdd['userType'];
+            $user->EntryDate = date('Y-m-d H:i:s');
+            $user->EntryBy = Auth::user()->UserId;
+            $user->EntryIpAddress = $_SERVER['REMOTE_ADDR'];
+            $user->save();
+
+
+            //Insert User Menu
+            UserMenu::where('UserID', $dataToAdd['userid'])->delete();
+
+            // 3. Insert new UserMenu records
+            if (isset($dataToAdd['usermenu']) && is_array($dataToAdd['usermenu'])) {
+                $menuInsertData = [];
+
+                foreach ($dataToAdd['usermenu'] as $parentMenu => $menuIds) {
+                    if (is_array($menuIds)) {
+                        foreach ($menuIds as $menuId) {
+                            $menuInsertData[] = [
+                                'UserID' => $dataToAdd['userid'],
+                                'MenuId' => $menuId
+                            ];
+                        }
+                    }
+                }
+
+                if (!empty($menuInsertData)) {
+                    UserMenu::insert($menuInsertData);
+                }
+            }
+
+            //Insert into UserTerritory
+            UserTerritory::where('UserID', $dataToAdd['userid'])->delete();
+            $territories = $dataToAdd['territory'];
+            foreach ($territories as $territory) {
+                $userTerritory = new UserTerritory();
+                $userTerritory->UserID = $user->UserId;
+                $userTerritory->TTYCode = $territory;
+                $userTerritory->save();
+            }
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'User added successfully'
+            ],200);
+
+        }
+        catch (\Exception $exception) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Something went wrong!' . $exception->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getUserMenu($userId, $defaultBusiness) {
+        // Query to get the menus
+        $menus = DB::table('Menu as M')
+            ->leftJoin('UserMenu as U', function($join) use ($userId) {
+                $join->on('M.MenuId', '=', 'U.MenuId')
+                    ->where('U.UserId', '=', $userId);
+            })
+            ->where('M.Active', 'Y')
+            ->where(function($query) use ($defaultBusiness) {
+                $query->where('M.SpecificBusiness', '')
+                    ->orWhere('M.SpecificBusiness', $defaultBusiness);
+            })
+            ->select(
+                'M.MenuId',
+                'M.MenuName as ParentMenuName',
+                'M.SubMenuName as MenuName',
+                DB::raw("COALESCE(U.UserId, '') as Selected")
+            )
+            ->orderBy('ParentMenuName')
+            ->get();
+
+        // Group menus by ParentMenuName
+        $groupedMenus = $menus->groupBy('ParentMenuName');
+
+        // Format the result for Vue
+        $formattedMenus = $groupedMenus->map(function ($menus) {
+            return $menus->map(function ($menu) {
+                return [
+                    'value' => $menu->MenuId,
+                    'label' => $menu->MenuName,
+                    'selected' => !empty($menu->Selected)
+                ];
+            });
+        });
+
+        return $formattedMenus;
+    }
+
+    public function getUserTerritory($userId, $defaultBusiness) {
+        $territories = DB::table('viewTerritory as VT')
+            ->leftJoin('UserTerritory as UT', function($join) use ($userId) {
+                $join->on('UT.TTYCode', '=', 'VT.TTYCode')
+                    ->where('UT.UserID', '=', $userId);
+            })
+            ->where('VT.Business', $defaultBusiness)
+            ->where('VT.TTYName', '<>', '')
+            ->select('VT.*', 'UT.UserID')
+            ->orderBy('VT.TTYName')
+            ->get();
+
+        return $territories;
+    }
+
 }

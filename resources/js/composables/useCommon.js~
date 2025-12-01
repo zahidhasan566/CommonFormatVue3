@@ -8,6 +8,7 @@ import { getCurrentInstance } from 'vue';
 import { ElNotification } from 'element-plus';
 const baseurl = require('../base_url');
 
+
 // import 'vue-toastification/dist/index.css';
 // import XLSX from "xlsx";
 
@@ -15,22 +16,11 @@ const baseurl = require('../base_url');
 const toast = useToast();
 
 // Notification Methods (Global, outside of useCommon)
-export function successNoti(msg) {
-    toast.success(msg);
-}
 
-export function errorNoti(msg) {
-    if (!msg.response || !msg.response.data?.message) {
-        toast.error(msg);
-    } else {
-        toast.error(msg.response.data.message);
-    }
-}
 
 export function useCommon() {
     // FIX: Don't use getCurrentInstance here - get mainOrigin directly
     const mainOrigin = window.location.origin + baseurl
-    console.log(mainOrigin)
 
     // Reactive state for data, headers, and dataSets
     const data = ref({});
@@ -51,13 +41,11 @@ export function useCommon() {
 
     // Error notification
     const errorNoti = (error) => {
-        const message = error.response?.data?.message || error.message || 'An error occurred';
 
-        ElNotification({
-            title: 'Error',
-            message: message,
-            type: 'error',
-            duration: 3000
+        const message = error.response?.data?.message || error.message || 'An error occurred';
+        toast.error(message, {
+            timeout: 3000,
+            position: 'top-right'
         });
 
         console.error('Error:', error);
@@ -65,12 +53,26 @@ export function useCommon() {
 
     // Success notification
     const successNoti = (message) => {
-        ElNotification({
-            title: 'Success',
-            message: message,
-            type: 'success',
-            duration: 3000
+        toast.success(message, {
+            timeout: 3000,
+            position: 'top-right'
         });
+        // ElNotification({
+        //     title: 'Success',
+        //     message: message,
+        //     type: 'success',
+        //     duration: 3000
+        // });
+    };
+    const warningNoti  = (message) => {
+
+        const message = error.response?.data?.message || error.message || 'An error occurred';
+        toast.error(message, {
+            timeout: 3000,
+            position: 'top-right'
+        });
+
+        console.error('Error:', error);
     };
 
     // Axios functions

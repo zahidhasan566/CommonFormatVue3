@@ -45,9 +45,6 @@ return [
             'provider' => 'custom',
         ],
     ],
-    'providers' => [
-      
-    ],
     /*
     |--------------------------------------------------------------------------
     | User Providers
@@ -68,7 +65,10 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => false,
+            'model' => App\Models\User::class,
+        ],
+        'custom' => [
+            'driver' => 'custom',
         ],
 
         // 'users' => [
