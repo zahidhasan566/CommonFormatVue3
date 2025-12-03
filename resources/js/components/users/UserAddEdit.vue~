@@ -28,11 +28,13 @@
                                         <label for="userid">User ID <span class="text-danger">*</span></label>
                                         <Field
                                             name="userid"
+                                            :readOnly = "actionType == 'edit'"
                                             v-model="formData.userid"
                                             type="text"
                                             class="form-control"
                                             :class="{ 'is-invalid': errors.userid }"
                                             rules="required|min:3"
+                                            @input="handleUserIdInput"
                                         />
                                         <ErrorMessage name="userid" class="text-danger" />
                                     </div>
@@ -44,6 +46,7 @@
                                         <label for="staffid">Staff ID <span class="text-danger">*</span></label>
                                         <Field
                                             name="staffid"
+                                            :readOnly = "actionType == 'edit'"
                                             v-model="formData.staffid"
                                             type="text"
                                             class="form-control"
@@ -207,8 +210,8 @@
                                             class="form-control"
                                         >
                                             <option value="1">Admin</option>
-                                            <option value="3">Field Force</option>
-                                            <option value="2">Report User</option>
+                                            <option value="2">Field Force</option>
+                                            <option value="3">Report User</option>
                                         </Field>
                                     </div>
                                 </div>
@@ -222,6 +225,7 @@
                                             <label class="form-label">{{ menuGroup.label }}</label>
                                             <Field :name="`usermenu_${menuGroup.label}`" v-slot="{ field, errorMessage }">
                                                 <Multiselect
+                                                    :key="key"
                                                     v-model="formData.usermenu[menuGroup.label]"
                                                     :options="menuGroup.options"
                                                     mode="tags"
@@ -288,12 +292,110 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted, onBeforeUnmount } from 'vue';
+import { reactive,ref, onMounted, inject, onBeforeUnmount,nextTick } from 'vue';
 import { Form, Field, ErrorMessage, defineRule } from 'vee-validate';
 import Multiselect from '@vueform/multiselect';
 import '@vueform/multiselect/themes/default.css';
 // Inject common methods (make sure you've provided them in main.js)
 const { axiosGet, axiosPost, errorNoti, successNoti } = inject('common');
+
+
+const emitter = inject('emitter');
+
+onMounted(() => {
+    emitter.on('add-edit-user', async (item) => {
+        isModalOpen.value = true;
+
+
+        // Fetch supporting data first
+        await fetchSupportingData();
+
+        if (item.UserId) {
+            title.value = 'Edit User';
+            actionType.value = 'edit';
+
+            // Use async/await or handle the callback properly
+            axiosGet('users/get-existing-user-data/' + item.UserId, async (response) => {
+
+                //User Data
+                formData.userid = response.user.UserId;
+                formData.staffid = response.user.StaffID;
+                formData.username = response.user.UserName;
+                formData.designation = response.user.Designation;
+                formData.business = response.user.Branch;
+                formData.userLevel = response.user.UserLevel;
+                formData.active = response.user.Active;
+                formData.levelCode = response.user.LevelCode;
+                formData.userType = response.user.UserType;
+                formData.password = response.user.DecodedPassword || '';  // Default to empty string if undefined
+                formData.confirmpassword = response.user.DecodedPassword || '';
+
+
+                //Menu Assign
+                // Step 1: Format menu list
+                menuList.value = formatMenuData(response.menu);
+                // Step 2: Initialize empty structure
+                formData.usermenu = {};
+                menuList.value.forEach(group => {
+                    formData.usermenu[group.label] = [];
+                });
+                // Step 3: Wait for DOM
+                await nextTick();
+                // Step 4: Set selected values
+                const selected = initializeSelectedMenus(response.menu);
+                Object.assign(formData.usermenu, selected);
+                // Step 5: Force re-render
+                await nextTick();
+                key.value++;
+
+
+                //Territory
+                if (response.territory && Array.isArray(response.territory)) {
+                    // This is assuming `response.territory` contains TTYCode values
+                    formData.territory = response.territory
+                        .map(item => item.TTYCode) // Just extract TTYCode values
+                        .filter(code => code !== undefined);
+                }
+
+            }, (error) => {
+                errorNoti(error);
+            });
+        } else {
+            title.value = 'Add User';
+            actionType.value = 'add';
+
+        }
+    });
+});
+const loading = ref(false);
+const isModalOpen = ref(false);
+const formData = reactive({
+    userid: '',
+    staffid: '',
+    password: '',
+    confirmpassword: '',
+    username: '',
+    business: '',
+    designation: '',
+    userLevel: 'Level1',
+    active: 'Y',
+    usermenu: {},
+    territory: [],
+    levelCode: '',
+    userType: ''
+});
+const designationList = ref([]);
+const menuList = ref([]);
+const territoryList = ref([]);
+const businessList = ref([]);
+const title = ref('');
+const key = ref(0);
+const actionType = ref('');
+const userIdError = ref('');
+const userIdValid = ref(false);
+const checkingUserId = ref(false);
+let checkTimeout = null;
+
 
 // Define validation rules with custom messages
 defineRule('required', (value) => {
@@ -326,32 +428,10 @@ defineRule('requiredArray', (value) => {
     return true;
 });
 
-const loading = ref(false);
-const isModalOpen = ref(false);
-const formData = ref({
-    userid: '',
-    staffid: '',
-    password: '',
-    confirmpassword: '',
-    username: '',
-    business: '',
-    designation: '',
-    userLevel: 'Level1',
-    active: 'Y',
-    usermenu: {},
-    territory: [],
-    levelCode: '',
-    userType: ''
-});
-const designationList = ref([]);
-const menuList = ref([]);
-const territoryList = ref([]);
-const businessList = ref([]);
-const title = ref('');
 
 // Custom validation rule for password confirmation
 const confirmPasswordRule = (value) => {
-    if (value !== formData.value.password) {
+    if (value !== formData.password) {
         return 'Passwords do not match';
     }
     return true;
@@ -364,32 +444,108 @@ const openModal = () => {
 const closeModal = () => {
     isModalOpen.value = false;
     // Reset form data
-    formData.value = {
-        userid: '',
-        staffid: '',
-        password: '',
-        confirmpassword: '',
-        username: '',
-        business: '',
-        designation: '',
-        userLevel: 'Level1',
-        active: 'Y',
-        usermenu: {},
-        territory: [],
-        levelCode: '',
-        userType: ''
-    };
+    formData.userid = '';
+    formData.staffid = '';
+    formData.password = '';
+    formData.confirmpassword = '';
+    formData.username = '';
+    formData.business = '';
+    formData.designation = '';
+    formData.userLevel = 'Level1';
+    formData.active = 'Y';
+    formData.usermenu = {};
+    formData.territory = [];
+    formData.levelCode = '';
+    formData.userType = '';
 };
 
-const emitter = inject('emitter');
+// Check if user ID exists
 
-onMounted(() => {
-    emitter.on('add-edit-user', () => {
-        isModalOpen.value = true;
-        title.value = 'Add User';
-        fetchSupportingData();
-    });
-});
+const checkUserIdExists = () => {
+    // Skip check if in edit mode
+    if (actionType.value === 'edit') return;
+
+    // Skip if userid is empty or too short
+    if (!formData.userid || formData.userid.length < 3) {
+        userIdError.value = '';
+        userIdValid.value = false;
+        return;
+    }
+
+    // Prevent duplicate calls if already checking
+    if (checkingUserId.value) return;
+
+    checkingUserId.value = true;
+    userIdError.value = '';
+    userIdValid.value = false;
+
+    axiosGet(
+        `users/check-userid/${formData.userid}`,
+        (response) => {
+            // Success callback
+            console.log(response, 'exist');
+
+            console.log('Success response:', response);
+
+            // Check if the response structure has the data we need
+            if (response && typeof response.exists !== 'undefined') {
+                if (response.exists === true) {
+                    userIdError.value = 'This User ID already exists';
+                    userIdValid.value = false;
+                    successNoti('User ID already exists');
+                    formData.userid = '';
+                } else {
+                    userIdError.value = '';
+                    userIdValid.value = true;
+                }
+            } else {
+                userIdError.value = '';
+                userIdValid.value = true;
+            }
+            checkingUserId.value = false;
+        },
+        (error) => {
+            console.log('dfdfff')
+            // Error callback - handle custom error message here
+            console.error('Error checking user ID:', error);
+
+            // Check if error has a custom message from backend
+            if (error && error.message) {
+                userIdError.value = error.message;
+                errorNoti(error.message);
+            } else if (error && error.error) {
+                userIdError.value = error.error;
+                errorNoti('Error checking user ID');
+                // errorNoti(error.error);
+            } else {
+                userIdError.value = 'Error checking user ID';
+                errorNoti('Error checking user ID');
+            }
+
+            checkingUserId.value = false;
+        }
+    );
+};
+// Handle input with debounce
+const handleUserIdInput = () => {
+    userIdValid.value = false;
+    userIdError.value = '';
+
+    // Clear previous timeout
+    if (checkTimeout) {
+        clearTimeout(checkTimeout);
+    }
+
+    // Skip if in edit mode
+    if (actionType.value === 'edit') return;
+
+    // Set new timeout for debounced check
+    checkTimeout = setTimeout(() => {
+        if (formData.userid && formData.userid.length >= 3) {
+            checkUserIdExists();
+        }
+    }, 500); // Wait 500ms after user stops typing
+};
 
 const fetchSupportingData = async () => {
     try {
@@ -401,8 +557,8 @@ const fetchSupportingData = async () => {
             businessList.value = response.businessBranch
             menuList.value = formatMenuData(response.menu);
             // Initialize selected menus
-            formData.usermenu = initializeSelectedMenus(response.menu);
-            territoryList.value = response.territory
+           // formData.usermenu = initializeSelectedMenus(response.menu);
+            territoryList.value = response.territory;
 
         }, (error) => {
             errorNoti(error);
@@ -436,6 +592,8 @@ const initializeSelectedMenus = (menus) => {
             .map(menu => menu.value);
     }
 
+    console.log(selectedMenus)
+
     return selectedMenus;
 };
 
@@ -447,12 +605,15 @@ const territoryRequired = (value) => {
     return true;
 };
 const submitForm = (values) => {
-    console.log('Form data:', formData.value);
+    console.log('Form data:', formData);
     console.log('Validated values:', values);
     try {
         var submitUrl = 'users/add';
+        if (actionType.value == 'edit') {
+            submitUrl = 'users/update';
+        }
         axiosPost(submitUrl, {
-            formData: formData.value,
+            formData: formData,
         }, (response) => {
             successNoti(response.message);
             emitter.emit('refresh-datatable', null, null);

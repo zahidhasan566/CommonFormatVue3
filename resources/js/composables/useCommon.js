@@ -42,13 +42,20 @@ export function useCommon() {
     // Error notification
     const errorNoti = (error) => {
 
-        const message = error.response?.data?.message || error.message || 'An error occurred';
+        let message;
+
+        // Check if error is a string
+        if (typeof error === 'string') {
+            message = error;
+        } else {
+            // It's an error object
+            message = error.response?.data?.message || error.message || 'An error occurred';
+        }
+
         toast.error(message, {
             timeout: 3000,
             position: 'top-right'
         });
-
-        console.error('Error:', error);
     };
 
     // Success notification

@@ -10,7 +10,7 @@ class UserMenu extends Model
     use HasFactory;
     protected $table = "UserMenu";
     public $timestamps = false;
-    public $primaryKey = false;
+    protected $primaryKey = null;
     public $incrementing = false;
     protected $guarded = [];
 }

@@ -1,0 +1,16 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class ViewTerritory extends Model
+{
+    use HasFactory;
+    protected $table = "ViewTerritory";
+    public $timestamps = false;
+    public $primaryKey = 'TTYCode';
+    public $incrementing = false;
+    protected $guarded = [];
+}

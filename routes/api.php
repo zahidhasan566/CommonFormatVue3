@@ -27,7 +27,10 @@ Route::group(['middleware' => 'jwt:api'], function () {
 Route::group(['prefix' => 'users'],function () {
     Route::post('list',[\App\Http\Controllers\Users\UserController::class,'index']);
     Route::get('supporting-data',[\App\Http\Controllers\Users\UserController::class,'getSupportingData']);
+    Route::get('check-userid/{userId}',[\App\Http\Controllers\Users\UserController::class,'checkUserId']);
     Route::post('add',[\App\Http\Controllers\Users\UserController::class,'storeUser']);
+    Route::get('get-existing-user-data/{userId}',[\App\Http\Controllers\Users\UserController::class,'getExistingUserData']);
+    Route::post('update',[\App\Http\Controllers\Users\UserController::class,'updateUser']);
 
 
 

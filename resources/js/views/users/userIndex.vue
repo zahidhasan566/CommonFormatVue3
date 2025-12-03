@@ -7,7 +7,7 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <h4 class="page-title">User Management</h4>
                             <div>
-                                <button class="btn btn-secondary btn-sm" @click="addUser">
+                                <button class="btn btn-secondary btn-sm" @click="addEditUser">
                                     <i class="ti-download"></i> Add User
                                 </button>
                                 <button class="btn btn-success btn-sm" @click="exportData">
@@ -27,7 +27,7 @@
                 :options="datatableOptions">
                 <!-- Custom slot for actions column -->
                 <template #actions="{ item }">
-                    <button class="btn btn-sm btn-custom btn-primary" @click="editUser(item)" title="Edit">
+                    <button class="btn btn-sm btn-custom btn-primary" @click="addEditUser(item)" title="Edit">
                         <i class="ti-pencil">Edit</i>
                     </button>
                     <button class="btn btn-sm btn-custom btn-dark" @click="viewUser(item)" title="View">
@@ -84,7 +84,7 @@ const datatableOptions = ref({
     numberFormat: [], // Column indices to format as numbers
     dateFormat: [5], // Column indices to format as dates (created_at)
     periodFormat: [], // Column indices to format as periods
-    slots: [5], // Column indices with custom slots (actions)
+    slots: [6], // Column indices with custom slots (actions)
     slotsName: ['actions'], // Slot names corresponding to slots array
     showFilter: ['startDate', 'endDate'], // Filters to show
     colSize: [
@@ -128,22 +128,20 @@ onBeforeUnmount(() => {
     emitter.off('add-edit-user');
 });
 // Methods
-const editUser = (item) => {
-    console.log('Edit user:', item);
-};
-
-const addUser = ()=>{
-    //loading.value = true;
-    // nextTick(() => {
-    //     emitter.emit('add-edit-user');
-    //     console.log(loading.value);  // This will now log the updated value (true)
-    // });
+const addEditUser = async (item = null) => {
     loading.value = true;
-    // Wait for component to mount before emitting
-    setTimeout(() => {
-        emitter.emit('add-edit-user');
-    }, 50);
+    await nextTick();
+    emitter.emit('add-edit-user', item);
 }
+// const addEditUser = (item='')=>{
+//     loading.value = true;
+//     await nextTick();
+//     emitter.emit('add-edit-user', item);
+//     // Wait for component to mount before emitting
+//     // setTimeout(() => {
+//     //     emitter.emit('add-edit-user', item);
+//     // }, 50);
+// }
 
 // const changeStatus = () => {
 //     loading = true
